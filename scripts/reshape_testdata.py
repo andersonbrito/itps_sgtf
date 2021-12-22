@@ -69,16 +69,6 @@ if __name__ == '__main__':
         rename_entry = {old_colname: new_colname}
         dict_rename[id].update(rename_entry)
 
-        # old_data = dfR.loc[idx, 'old_data']
-        # new_data = dfR.loc[idx, 'new_data']
-        # if old_data + new_data not in ['']:
-        #     if id not in dict_corrections:
-        #         dict_corrections[id] = {}
-        #     if new_colname not in dict_corrections[id]:
-        #         dict_corrections[id][new_colname] = {}
-        #     data_entry = {old_data: new_data}
-        #     dict_corrections[id][new_colname].update(data_entry)
-
     # load value corrections
     dfC = load_table(correction_file)
     dfC.fillna('', inplace=True)
@@ -87,12 +77,7 @@ if __name__ == '__main__':
     all_ids = list(set(dfC['lab_id'].tolist()))
     for idx, row in dfC.iterrows():
         lab_id = dfC.loc[idx, 'lab_id']
-        # if id not in dict_rename:
-        #     dict_rename[id] = {}
-        # old_colname = dfC.loc[idx, 'column_name']
         colname = dfC.loc[idx, 'column_name']
-        # rename_entry = {old_colname: new_colname}
-        # dict_rename[id].update(rename_entry)
 
         old_data = dfC.loc[idx, 'old_data']
         new_data = dfC.loc[idx, 'new_data']
@@ -195,8 +180,10 @@ if __name__ == '__main__':
             id = element
             element = element + '/'
             if os.path.isdir(input_folder + element) == True:
+                print('\n# Processing datatables from: ' + id)
                 for filename in os.listdir(input_folder + element):
                     if filename.split('.')[-1] in ['tsv', 'csv', 'xls', 'xlsx'] and filename[0] not in ['~', '_']:
+                        print('\t- File: ' + filename)
                         df = load_table(input_folder + element + filename)
                         df.fillna('', inplace=True)
                         df = fix_datatable(df, id)
@@ -217,7 +204,9 @@ if __name__ == '__main__':
         return new_value
 
     for lab_id, columns in dict_corrections.items():
+        print('\t- Fixing lab data: ' + lab_id)
         for column, values in columns.items():
+            # print('\t- ' + column + ' (' + column + ' → ' + str(values) + ')')
             dfT[column] = dfT[column].apply(lambda x: fix_data_points(lab_id, column, x))
 
     # reformat dates and get ages
@@ -274,6 +263,9 @@ if __name__ == '__main__':
 
     dfT['date_testing'] = dfT['date_testing'].apply(lambda x: x.strftime('%Y-%m-%d'))
     # print(dfT)
+
+    # fix test results with empty data
+    dfT['test_result'] = dfT['test_result'].apply(lambda x: 'Negative' if x not in ['Negative', 'Positive'] else x)
 
     # output duplicates rows
     duplicates = dfT.duplicated().sum()

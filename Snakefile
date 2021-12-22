@@ -4,10 +4,11 @@ rule arguments:
 		rename_file = "data/rename_columns.xlsx",
 		correction_file = "data/rename_values.xlsx",
 		shapefile = "/Users/anderson/GLab Dropbox/Anderson Brito/codes/geoCodes/bra_adm_ibge_2020_shp/bra_admbnda_adm2_ibge_2020.shp",
+		cache = "config/cache_coordinates.tsv",
 		index_column = "division_exposure",
 		date_column = "date_testing",
-		start_date = "2021-11-01",
-		end_date = "2021-12-31"
+		start_date = "2021-12-01",
+		end_date = "2021-12-21"
 
 
 arguments = rules.arguments.params
@@ -42,6 +43,7 @@ rule geomatch:
 		"""
 	input:
 		input_file =  "results/combined_testdata.tsv",
+		cache = arguments.cache,
 		shapefile = arguments.shapefile
 	params:
 		geo_columns = "state, location",
@@ -61,13 +63,14 @@ rule geomatch:
 			--add-geo {params.add_geo} \
 			--lat {params.lat} \
 			--long {params.long} \
+			--cache {input.cache} \
 			--check-match {params.check_match} \
 			--target \"{params.target}\" \
 			--output {output.matrix}
 		"""
 
 
-rule sgtf_states:
+rule sgtf_detection:
 	message:
 		"""
 		Aggregate data related to SGTF results by state
@@ -78,14 +81,25 @@ rule sgtf_states:
 		xvar = arguments.date_column,
 		xtype = "time",
 		format = "integer",
-		yvar = "ADM2_PCODE S_detection",
-		index = "ADM2_PCODE",
-		extra_columns = "ADM1_PT ADM2_PT",
-		filters = "~test_result:Negative",
+		
+		yvar_country = "country S_detection",
+		index_country = "country",
+		
+		yvar_states = "ADM1_PCODE S_detection",
+		index_states = "ADM1_PCODE",
+		extra_columns_states = "ADM1_PT country",
+		
+		yvar_location = "ADM2_PCODE S_detection",
+		index_location = "ADM2_PCODE",
+		extra_columns_location = "ADM2_PT state",
+		
+		filters = "test_result:Positive",
 		start_date = arguments.start_date,
 		end_date = arguments.end_date
 	output:
-		matrix = "results/matrix_states_sgtf_detection.tsv"
+		matrix_country = "results/matrix_country_sgtf_detection.tsv",
+		matrix_states = "results/matrix_states_sgtf_detection.tsv",
+		matrix_location = "results/matrix_location_sgtf_detection.tsv",
 	shell:
 		"""
 		python3 scripts/rows2matrix.py \
@@ -93,17 +107,42 @@ rule sgtf_states:
 			--xvar {params.xvar} \
 			--xtype {params.xtype} \
 			--format {params.format} \
-			--yvar {params.yvar} \
-			--unique-id {params.index} \
-			--extra-columns  {params.extra_columns} \
+			--yvar {params.yvar_country} \
+			--unique-id {params.index_country} \
 			--filter {params.filters} \
 			--start-date {params.start_date} \
 			--end-date {params.end_date} \
-			--output {output.matrix}
+			--output {output.matrix_country}
+
+		python3 scripts/rows2matrix.py \
+			--input {input.input_file} \
+			--xvar {params.xvar} \
+			--xtype {params.xtype} \
+			--format {params.format} \
+			--yvar {params.yvar_states} \
+			--unique-id {params.index_states} \
+			--extra-columns  {params.extra_columns_states} \
+			--filter {params.filters} \
+			--start-date {params.start_date} \
+			--end-date {params.end_date} \
+			--output {output.matrix_states}
+			
+		python3 scripts/rows2matrix.py \
+			--input {input.input_file} \
+			--xvar {params.xvar} \
+			--xtype {params.xtype} \
+			--format {params.format} \
+			--yvar {params.yvar_location} \
+			--unique-id {params.index_location} \
+			--extra-columns  {params.extra_columns_location} \
+			--filter {params.filters} \
+			--start-date {params.start_date} \
+			--end-date {params.end_date} \
+			--output {output.matrix_location}
 		"""
 
 
-rule alltests_states:
+rule all_tests:
 	message:
 		"""
 		Aggregate counts of all SGTF tests by state
@@ -114,14 +153,25 @@ rule alltests_states:
 		xvar = arguments.date_column,
 		xtype = "time",
 		format = "integer",
-		yvar = "ADM2_PCODE",
-		index = "ADM2_PCODE",
-		extra_columns = "location ADM1_PT ADM2_PT",
-		filters = "~test_result:Negative",
+
+		yvar_country = "country",
+		index_country = "country",
+		
+		yvar_states = "ADM1_PCODE",
+		index_states = "ADM1_PCODE",
+		extra_columns_states = "ADM1_PT country",
+		
+		yvar_location = "ADM2_PCODE",
+		index_location = "ADM2_PCODE",
+		extra_columns_location = "ADM2_PT state",
+		
+		filters = "test_result:Positive",
 		start_date = arguments.start_date,
 		end_date = arguments.end_date
 	output:
-		matrix = "results/matrix_states_sgtf_denominators.tsv"
+		matrix_country = "results/matrix_country_sgtf_denominators.tsv",
+		matrix_states = "results/matrix_states_sgtf_denominators.tsv",
+		matrix_location = "results/matrix_location_sgtf_denominators.tsv",
 	shell:
 		"""
 		python3 scripts/rows2matrix.py \
@@ -129,14 +179,70 @@ rule alltests_states:
 			--xvar {params.xvar} \
 			--xtype {params.xtype} \
 			--format {params.format} \
-			--yvar {params.yvar} \
-			--unique-id {params.index} \
-			--extra-columns  {params.extra_columns} \
+			--yvar {params.yvar_country} \
+			--unique-id {params.index_country} \
 			--filter {params.filters} \
 			--start-date {params.start_date} \
 			--end-date {params.end_date} \
-			--output {output.matrix}
+			--output {output.matrix_country}
+
+		python3 scripts/rows2matrix.py \
+			--input {input.input_file} \
+			--xvar {params.xvar} \
+			--xtype {params.xtype} \
+			--format {params.format} \
+			--yvar {params.yvar_states} \
+			--unique-id {params.index_states} \
+			--extra-columns  {params.extra_columns_states} \
+			--filter {params.filters} \
+			--start-date {params.start_date} \
+			--end-date {params.end_date} \
+			--output {output.matrix_states}
+			
+		python3 scripts/rows2matrix.py \
+			--input {input.input_file} \
+			--xvar {params.xvar} \
+			--xtype {params.xtype} \
+			--format {params.format} \
+			--yvar {params.yvar_location} \
+			--unique-id {params.index_location} \
+			--extra-columns  {params.extra_columns_location} \
+			--filter {params.filters} \
+			--start-date {params.start_date} \
+			--end-date {params.end_date} \
+			--output {output.matrix_location}
 		"""
+
+
+rule aggregate:
+	message:
+		"""
+		Aggregate data by month
+		"""
+	input:
+		input_file1 = "results/matrix_states_sgtf_detection.tsv",
+		input_file2 = "results/matrix_states_sgtf_denominators.tsv"
+	params:
+		unit = "month",
+		format = "integer"
+	output:
+		matrix1 = "results/matrix_states_sgtf_detection_month.tsv",
+		matrix2 = "results/matrix_states_sgtf_denominators_month.tsv"
+	shell:
+		"""
+		python3 scripts/aggregator.py \
+			--input {input.input_file1} \
+			--unit {params.unit} \
+			--format {params.format} \
+			--output {output.matrix1}
+		
+		python3 scripts/aggregator.py \
+			--input {input.input_file2} \
+			--unit {params.unit} \
+			--format {params.format} \
+			--output {output.matrix2}
+		"""
+
 
 
 rule percent_states:
@@ -146,12 +252,15 @@ rule percent_states:
 		"""
 	input:
 		input1 = "results/matrix_states_sgtf_detection.tsv",
-		input2 = "results/matrix_states_sgtf_denominators.tsv"
+		input2 = "results/matrix_states_sgtf_denominators.tsv",
+		input3 = "results/matrix_states_sgtf_detection_month.tsv",
+		input4 = "results/matrix_states_sgtf_denominators_month.tsv",
 	params:
-		index1 = "ADM2_PCODE S_detection",
-		index2 = "ADM2_PCODE"
+		index1 = "ADM1_PCODE S_detection",
+		index2 = "ADM1_PCODE"
 	output:
-		matrix = "results/matrix_states_sgtf_percentages.tsv"
+		matrix1 = "results/matrix_states_sgtf_percentages.tsv",
+		matrix2 = "results/matrix_states_sgtf_percentages_month.tsv"
 	shell:
 		"""
 		python3 scripts/normdata.py \
@@ -159,9 +268,15 @@ rule percent_states:
 			--input2 {input.input2} \
 			--index1 {params.index1} \
 			--index2 {params.index2} \
-			--output {output.matrix}
-		"""
+			--output {output.matrix1}
 
+		python3 scripts/normdata.py \
+			--input1 {input.input3} \
+			--input2 {input.input4} \
+			--index1 {params.index1} \
+			--index2 {params.index2} \
+			--output {output.matrix2}
+		"""
 
 #rule xxx:
 #	message:

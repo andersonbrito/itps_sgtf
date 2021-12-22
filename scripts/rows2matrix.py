@@ -6,7 +6,7 @@
 #
 #
 # Release date: 2021-08-22
-# Last update: 2021-09-22
+# Last update: 2021-12-21
 
 import pandas as pd
 import argparse
@@ -108,7 +108,7 @@ if __name__ == '__main__':
                     dfF = dfF.append(df_filtered)
                 else:
                     dfF = dfF[dfF[col].isin([val])]
-                print(dfF)
+                # print(dfF)
         # for filter_value in sorted([f.strip() for f in filters.split(',')]):
         for filter_value in sorted(filters):
             col = filter_value.split(':')[0]
@@ -192,6 +192,8 @@ if __name__ == '__main__':
         for column in extra_cols:
             if column in df.columns.to_list():
                 df2.insert(0, column, '')
+    else:
+        extra_cols = []
 
     if target_variable in ['', None]:
         y_var = list(set(y_var))

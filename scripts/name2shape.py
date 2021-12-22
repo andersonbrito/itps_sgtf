@@ -20,6 +20,7 @@ if __name__ == '__main__':
     parser.add_argument("--add-geo", required=False, help="Extra column to be added with standard value applicable to all entries, e.g. 'country:Brazil'")
     parser.add_argument("--lat", required=False, default='lat', help="Column containing latitude data, if already existing in input file")
     parser.add_argument("--long", required=False, default='long', help="Column containing latitude data, if already existing in input file")
+    parser.add_argument("--cache", required=False, help="TSV file with cached coordinates")
     parser.add_argument("--save-latlong", required=False, default='no', choices=['no', 'yes'], help="Export coordinate columns 'lat' and 'long'?")
     parser.add_argument("--check-match", required=False, help="Column in shapefile containing the names of locations to be matched")
     parser.add_argument("--target", required=False, help="Comma-separated list of shapefile columns to be exported in the final output")
@@ -35,23 +36,24 @@ if __name__ == '__main__':
     output_coordinates = args.save_latlong
     lat_col = args.lat
     long_col = args.long
+    cache = args.cache
     check_col = args.check_match
     target_cols = args.target
     same_file = args.same_format
     output = args.output
 
-
-    # path = '/Users/anderson/GLab Dropbox/Anderson Brito/ITpS/projetos_itps/sgtf_omicron/analyses/'
-    # input = path + 'results/combined_testdata_short.tsv'
+    # path = '/Users/anderson/GLab Dropbox/Anderson Brito/ITpS/projetos_itps/sgtf_omicron/analyses/run1_20211221_sgtf/'
+    # input = path + 'results/combined_testdata.tsv'
     # shapefile = '/Users/anderson/GLab Dropbox/Anderson Brito/codes/geoCodes/bra_adm_ibge_2020_shp/bra_admbnda_adm2_ibge_2020.shp'
     # display_header = 'no'
-    # geo_cols = 'state_code, location'
+    # geo_cols = 'state, location'
     # add_geo_cols = 'country:Brazil'
     # output_coordinates = 'no'
     # lat_col = 'lat'
     # long_col = 'long'
+    # cache = path + 'config/cache_coordinates.tsv'
     # check_col = 'ADM2_PT'
-    # target_cols = "ADM1_PT, ADM2_PT, ADM2_PCODE"
+    # target_cols = "ADM1_PT, ADM1_PCODE, ADM2_PT, ADM2_PCODE"
     # same_file = 'yes'
     # output = path + "results/combined_testdata_geo.tsv"
 
@@ -103,13 +105,28 @@ if __name__ == '__main__':
     geo_cols = [c.split(':')[0].strip() for c in new_cols] + geo_cols
     last_level = geo_cols[-1]
 
-    # search coordinates (if any is missing), and create a
+    # search coordinates (if any is missing)
     df2 = gpd.GeoDataFrame(columns = geo_cols + [lat_col, long_col] + ['geometry'])
     if lat_col not in df1.columns.tolist():
         lat_col = 'lat'
         long_col = 'long'
         df1[lat_col] = ''
         df1[long_col] = ''
+
+    # cache coordinates
+    df3 = pd.DataFrame()
+    if cache not in ['', None]:
+        df3 = load_table(cache)
+        df3.fillna('', inplace=True)
+        place = [p for p in df3.columns.tolist() if p not in ['lat', 'long']]
+        df3['place'] = df3[place].astype(str).agg(', '.join, axis=1)
+        df3['coordinates'] = list(zip(df3['lat'], df3['long']))
+        # print(df3[['place', 'coordinates']])
+
+    if cache not in [None, '']:
+        found = pd.Series(df3.coordinates.values, index=df3.place).to_dict()
+    else:
+        found = {}
 
     # find coordinates for locations not found in cache or XML file
     def find_coordinates(place):
@@ -122,7 +139,6 @@ if __name__ == '__main__':
             coord = ('NA', 'NA')
             return coord
 
-    found = {}
     notfound = []
     if '' in df1['lat'].tolist():
         print('\nSearching coordinates...')
@@ -146,7 +162,7 @@ if __name__ == '__main__':
         if lat != '': # coordinatres already found
             lat, long = float(lat), float(long)
             coord = (lat, long)
-            found['-'.join(query)] = coord
+            found[', '.join(query)] = coord
             dict_row['lat'] = lat
             dict_row['long'] = long
             dict_row['geometry'] = Point(long, lat)
@@ -154,15 +170,19 @@ if __name__ == '__main__':
 
         else: # not found yet
             coord = ('NA', 'NA')
-            if '-'.join(query) not in found: # search coordinates
+            if ', '.join(query) not in found: # search coordinates
                 target = query[-1]
                 if target not in ['', 'NA', 'NAN', 'unknown', '-', np.nan, None]:
                     coord = find_coordinates(', '.join(query))  # search coordinates
                     if 'NA' not in coord:
-                        print('    (' + coord[0] + ', ' + coord[1] + ') \t→ ' + ', '.join(query) )
+                        print('    (' + coord[0] + ', ' + coord[1] + ') \t→ ' + ', '.join(query))
+                        data = {'lat': coord[0], 'long': coord[1]}
+                        for num, column in enumerate(geo_cols):
+                            data[column] = query[num]
+                        # print(data)
+                        df3 = df3.append(data, ignore_index=True)
             else:
-                # print('Already found', '-'.join(query))
-                coord = found['-'.join(query)]
+                coord = found[', '.join(query)]
 
             # print(lat, long)
             if 'NA' not in coord:
@@ -173,9 +193,8 @@ if __name__ == '__main__':
                     dict_row['long'] = long
                     dict_row['geometry'] = Point(long, lat)
                     df2 = df2.append(dict_row, ignore_index=True)
-                    found['-'.join(query)] = coord
+                    found[', '.join(query)] = coord
             else:
-                # found['-'.join(query)] = coord
                 if ', '.join(query) not in notfound:
                     notfound.append(', '.join(query))
 
@@ -205,10 +224,12 @@ if __name__ == '__main__':
             orig_name = results.loc[id2, last_level]
             new_name = results.loc[id2, check_col]
             # print(orig_name, new_name)
+            if len(new_name) <= 4:
+                threshold = 0.65
             if similar(orig_name.lower(), new_name.lower()) < threshold:
                 # print(orig_name, ' >>> ', new_name, ':', str(similar(orig_name, new_name)))
                 mismatches.append(orig_name + ' > ' + new_name)
-                results = results.drop(id2)
+                # results = results.drop(id2)
 
     if len(mismatches) > 0:
         print('\nWARNING!\nMismatches between the original location names and names in shapefiles were detected.\n'
@@ -216,9 +237,15 @@ if __name__ == '__main__':
         for entry in mismatches:
             print('\t- ' + entry)
 
+    if cache not in [None, '']:
+        df3 = df3.drop(columns=['place', 'coordinates'])
+        df3.to_csv(cache, sep='\t', index=False)
+
     # output updated dataframe
     if output_coordinates != 'yes':
         result = results.drop(columns=['lat', 'long'])
     results.to_csv(output, sep='\t', index=False)
     print('\nLocation names successfully matched to shapefile.\n\t- Output was saved :%s\n' % output)
+
+
 
