@@ -3,7 +3,7 @@
 # Created by: Anderson Brito
 # Email: anderson.brito@itps.org.br
 # Release date: 2021-12-05
-# Last update: 2021-12-14
+# Last update: 2021-12-28
 
 import pandas as pd
 import os
@@ -13,6 +13,10 @@ import time
 import argparse
 
 pd.set_option('display.max_columns', 500)
+today = time.strftime('%Y-%m-%d', time.gmtime())
+import platform
+print('Python version:', platform.python_version())
+print('Pandas version:', pd.__version__)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -31,11 +35,10 @@ if __name__ == '__main__':
     correction_file = args.correction
     output = args.output
 
-    today = time.strftime('%Y-%m-%d', time.gmtime())
-
-    # path = '/Users/anderson/GLab Dropbox/Anderson Brito/ITpS/projetos_itps/sgtf_omicron/analyses/'
+    # path = '/Users/anderson/GLab Dropbox/Anderson Brito/ITpS/projetos_itps/sgtf_omicron/analyses/run2_20211228_sgtf/'
     # input_folder = path + 'data/'
     # rename_file = input_folder + 'rename_columns.xlsx'
+    # correction_file = input_folder + 'fix_values.xlsx'
     # output = input_folder + today + '_combined_data.tsv'
 
     def load_table(file):
@@ -114,7 +117,7 @@ if __name__ == '__main__':
                 if code not in failures:
                     failures[code] = []
                 else:
-                    print('Warning: ' + code + ' is likely a duplicate')
+                    print('\t\tWarning: ' + code + ' is likely a duplicate')
 
                 # fix Ct values
                 genes = ['NGENE', 'ORF1AB', 'SGENE', 'MS2']
@@ -149,12 +152,14 @@ if __name__ == '__main__':
 
                 # print(failures[code])
                 if 'MS2' in failures[code]:
-                    print('Warning: ' + code + ' has no internal control')
+                    print('\t\tWarning: ' + code + ' has no internal control')
                 dfN = dfN.append(data, ignore_index=True)
             # print(dfN)
-        if lab == 'Diagnósticos do Brasil_2':
+        elif lab == 'Diagnósticos do Brasil_2':
+            # print(dfL)
             for idx, row in dfL.iterrows():
                 values = dfL.loc[idx, 'Resultado do Teste COVID']
+                # print(idx, values)
                 for entry in values.split("/"):
                     if 'negativo' in entry.lower():
                         entry = entry.split(':')[0] + ':' + '0'
@@ -166,6 +171,19 @@ if __name__ == '__main__':
                     elif gene == 'S':
                         dfL.loc[idx, 'Ct_S'] = str(np.round(float(ct.replace(',', '.')), 2))
                 dfL.loc[idx, 'test_result'] = 'Positive'
+            dfN = dfL
+
+        elif lab == 'DASA':
+            def not_assigned(geo_data):
+                empty = ['', 'SEM CIDADE', 'MUDOU', 'NAO_INFORMADO', 'NAOINFORMADO']
+                if geo_data in empty:
+                    geo_data = ''
+                return geo_data
+
+            dfL['birthdate'] = ''
+            dfL['sex'] = ''
+            dfL['cidade_norm'] = dfL['cidade_norm'].apply(lambda x: not_assigned(x))
+            dfL['uf_norm'] = dfL['uf_norm'].apply(lambda x: not_assigned(x))
             dfN = dfL
         return dfN
 
@@ -186,9 +204,11 @@ if __name__ == '__main__':
                         print('\t- File: ' + filename)
                         df = load_table(input_folder + element + filename)
                         df.fillna('', inplace=True)
-                        df = fix_datatable(df, id)
+                        df.reset_index(drop=True)
+                        df = fix_datatable(df, id) # reformat datatable
                         df.insert(0, 'lab_id', id)
-                        df = rename_columns(id, df)
+                        df = rename_columns(id, df) # fix data points
+                        # print(df.head)
                         frames = [dfT, df]
                         df2 = pd.concat(frames)
                         dfT = df2
@@ -203,8 +223,10 @@ if __name__ == '__main__':
             new_value = dict_corrections[id][col_name][value]
         return new_value
 
+
+    print('\n# Fixing data points...')
     for lab_id, columns in dict_corrections.items():
-        print('\t- Fixing lab data: ' + lab_id)
+        print('\t- Fixing data from: ' + lab_id)
         for column, values in columns.items():
             # print('\t- ' + column + ' (' + column + ' → ' + str(values) + ')')
             dfT[column] = dfT[column].apply(lambda x: fix_data_points(lab_id, column, x))
@@ -253,6 +275,8 @@ if __name__ == '__main__':
     def generate_id(column_id):
         id = hashlib.sha1(str(column_id).encode('utf-8')).hexdigest()
         return id
+    # print(dfT.columns.tolist())
+    # print(dfT[['lab_id', 'date_testing']])
 
     dfT['sample_id'] = dfT['unique_id'].apply(lambda x: generate_id(x))
     key_cols = ['lab_id', 'test_id', 'sample_id', 'Ct_S', 'Ct_N', 'Ct_ORF1ab', 'state', 'location', 'test_result',
@@ -262,7 +286,6 @@ if __name__ == '__main__':
             dfT = dfT.drop(columns=[col])
 
     dfT['date_testing'] = dfT['date_testing'].apply(lambda x: x.strftime('%Y-%m-%d'))
-    # print(dfT)
 
     # fix test results with empty data
     dfT['test_result'] = dfT['test_result'].apply(lambda x: 'Negative' if x not in ['Negative', 'Positive'] else x)

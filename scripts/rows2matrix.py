@@ -88,6 +88,7 @@ if __name__ == '__main__':
 
     df = load_table(input)
     df.fillna('', inplace=True)
+    print(df.columns.tolist())
 
     for idx in y_var:
         df = df[~df[idx].isin([''])]
@@ -122,8 +123,8 @@ if __name__ == '__main__':
                     dfF = dfF.append(df_filtered)
                 else:
                     dfF = dfF[~dfF[col].isin([val])]
-    df = dfF
-    # print(df.head)
+        df = dfF
+    print(df.columns.tolist())
 
     # filter by time
     if x_type == 'time':
