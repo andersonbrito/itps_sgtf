@@ -13,6 +13,8 @@ import time
 import argparse
 
 pd.set_option('display.max_columns', 500)
+pd.options.mode.chained_assignment = None
+
 today = time.strftime('%Y-%m-%d', time.gmtime())
 import platform
 print('Python version:', platform.python_version())
@@ -35,7 +37,7 @@ if __name__ == '__main__':
     correction_file = args.correction
     output = args.output
 
-    # path = '/Users/anderson/GLab Dropbox/Anderson Brito/ITpS/projetos_itps/sgtf_omicron/analyses/run2_20211228_sgtf/'
+    # path = '/Users/anderson/GLab Dropbox/Anderson Brito/ITpS/projetos_itps/sgtf_omicron/analyses/run4_20220111_sgtf/'
     # input_folder = path + 'data/'
     # rename_file = input_folder + 'rename_columns.xlsx'
     # correction_file = input_folder + 'fix_values.xlsx'
@@ -181,14 +183,36 @@ if __name__ == '__main__':
                 return geo_data
 
             dfL['birthdate'] = ''
-            dfL['sex'] = ''
+            # dfL['sex'] = ''
             dfL['cidade_norm'] = dfL['cidade_norm'].apply(lambda x: not_assigned(x))
             dfL['uf_norm'] = dfL['uf_norm'].apply(lambda x: not_assigned(x))
+            dfN = dfL
+
+        elif lab == 'IMT-CDL':
+            ignored = ['', 'sem amostra', 'Negativo']
+            dfL = dfL[~dfL['GENOTIPAGEM'].isin(ignored)]
+
+            def categories(genotype):
+                mock_ct = '999'
+                sgtf = ['Possível Omicron']
+                nonsgtf = ['Ancestral', 'Indeterminado']
+                if genotype in sgtf:
+                    mock_ct = ''
+                return mock_ct
+
+            dfL['IDADE'] = dfL['IDADE'].str.split(' ').str[0]
+            dfL['birthdate'] = ''
+            dfL['state'] = 'AM'
+            dfL['location'] = 'Manaus'
+            dfL['Ct_S'] = dfL['GENOTIPAGEM'].apply(lambda x: categories(x.strip()))
             dfN = dfL
         return dfN
 
     def rename_columns(id, df):
+        # print(df.columns.tolist())
+        # print(dict_rename[id])
         df = df.rename(columns=dict_rename[id])
+        # print(df.columns.tolist())
         return df
 
     # open data files
@@ -208,7 +232,6 @@ if __name__ == '__main__':
                         df = fix_datatable(df, id) # reformat datatable
                         df.insert(0, 'lab_id', id)
                         df = rename_columns(id, df) # fix data points
-                        # print(df.head)
                         frames = [dfT, df]
                         df2 = pd.concat(frames)
                         dfT = df2
@@ -230,6 +253,8 @@ if __name__ == '__main__':
         for column, values in columns.items():
             # print('\t- ' + column + ' (' + column + ' → ' + str(values) + ')')
             dfT[column] = dfT[column].apply(lambda x: fix_data_points(lab_id, column, x))
+
+    # print(dfT)
 
     # reformat dates and get ages
     dfT['date_testing'] = pd.to_datetime(dfT['date_testing'])

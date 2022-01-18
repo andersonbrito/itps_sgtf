@@ -12,6 +12,7 @@ dependencies:
 - xlrd
 - geopandas
 - geopy
+- unidecode
 - matplotlib
 - gdal
 - shapely

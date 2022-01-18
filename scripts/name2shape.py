@@ -24,7 +24,7 @@ if __name__ == '__main__':
     parser.add_argument("--lat", required=False, default='lat', help="Column containing latitude data, if already existing in input file")
     parser.add_argument("--long", required=False, default='long', help="Column containing latitude data, if already existing in input file")
     parser.add_argument("--cache", required=False, help="TSV file with cached coordinates")
-    parser.add_argument("--save-latlong", required=False, default='no', choices=['no', 'yes'], help="Export coordinate columns 'lat' and 'long'?")
+    parser.add_argument("--save-latlong", required=False, default='yes', choices=['no', 'yes'], help="Export coordinate columns 'lat' and 'long'?")
     parser.add_argument("--check-match", required=False, help="Column in shapefile containing the names of locations to be matched")
     parser.add_argument("--target", required=False, help="Comma-separated list of shapefile columns to be exported in the final output")
     parser.add_argument("--same-format", required=False, default='yes', choices=['no', 'yes'], help="Should all columns and rows in the input file be exported?")
@@ -203,7 +203,7 @@ if __name__ == '__main__':
             if 'NA' not in coord:
                 # if already found, OR requested to output file in same format as the input file
                 if ', '.join(query) not in found or same_file == 'yes':
-                # if same_file == 'yes' or '-'.join(query) not in found:
+                    # if same_file == 'yes' or '-'.join(query) not in found:
                     lat, long = float(coord[0]), float(coord[1])
                     df['lat'] = lat
                     df['long'] = long
@@ -254,7 +254,7 @@ if __name__ == '__main__':
             if len(new_name) <= 4:
                 threshold = 0.65
             if similar(orig_name.lower(), new_name.lower()) < threshold:
-                print(orig_name, ' >>> ', new_name, ':', str(similar(orig_name, new_name)))
+                # print(orig_name, ' >>> ', new_name, ':', str(similar(orig_name, new_name)))
                 mismatches.append(orig_name + ' > ' + new_name)
                 # results = results.drop(id2)
 
@@ -267,7 +267,6 @@ if __name__ == '__main__':
     # output updated dataframe
     if output_coordinates != 'yes':
         result = results.drop(columns=['lat', 'long'])
-        print('lat and long data were dropped')
     results.to_csv(output, sep='\t', index=False)
     print('\nLocation names successfully matched to shapefile.\n\t- Output was saved :%s\n' % output)
 

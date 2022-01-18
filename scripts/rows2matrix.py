@@ -33,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument("--yvar", nargs="+", required=True, type=str, help="One or more columns to be used as index")
     parser.add_argument("--unique-id", required=True, type=str, help="Column including the unique ids to be displayed in the Y axis")
     parser.add_argument("--extra-columns", nargs="+", required=False, type=str, help="Extra columns to export")
-    parser.add_argument("--filter", nargs="+", required=False, type=str, help="Format: '~column_name:value'. Remove '~' to keep only that data category")
+    parser.add_argument("--filter", required=False, type=str, help="Format: '~column_name:value'. Remove '~' to keep only that data category")
     parser.add_argument("--start-date", required=False, type=str,  help="Start date in YYYY-MM-DD format")
     parser.add_argument("--end-date", required=False, type=str,  help="End date in YYYY-MM-DD format")
     parser.add_argument("--output", required=True, help="TSV matrix")
@@ -88,43 +88,67 @@ if __name__ == '__main__':
 
     df = load_table(input)
     df.fillna('', inplace=True)
-    print(df.columns.tolist())
 
     for idx in y_var:
         df = df[~df[idx].isin([''])]
 
-    dfF = pd.DataFrame()
-    if filters not in ['', None]:
-        print('\nFiltering rows based on provided values...')
-        # for filter_value in sorted([f.strip() for f in filters.split(',')]):
-        for filter_value in sorted(filters):
-            col = filter_value.split(':')[0]
-            val = filter_value.split(':')[1]
+    # dfF = pd.DataFrame()
+    # if filters not in ['', None]:
+    #     print('\nFiltering rows based on provided values...')
+    #     # for filter_value in sorted([f.strip() for f in filters.split(',')]):
+    #     for filter_value in sorted(filters):
+    #         col = filter_value.split(':')[0]
+    #         val = filter_value.split(':')[1]
+    #
+    #         # inclusion of specific rows
+    #         if not filter_value.startswith('~'):
+    #             print('\t- Including only rows with \'' + col + '\' = \'' + val + '\'')
+    #             if dfF.empty:
+    #                 df_filtered = df[df[col].isin([val])]
+    #                 dfF = dfF.append(df_filtered)
+    #             else:
+    #                 dfF = dfF[dfF[col].isin([val])]
+    #             print(dfF)
+    #     # for filter_value in sorted([f.strip() for f in filters.split(',')]):
+    #     for filter_value in sorted(filters):
+    #         col = filter_value.split(':')[0]
+    #         val = filter_value.split(':')[1]
+    #         # exclusion of specific rows
+    #         if filter_value.startswith('~'):
+    #             col = col[1:]
+    #             print('\t- Excluding all rows with \'' + col + '\' = \'' + val + '\'')
+    #             if dfF.empty:
+    #                 df_filtered = df[~df[col].isin([val])]
+    #                 dfF = dfF.append(df_filtered)
+    #             else:
+    #                 dfF = dfF[~dfF[col].isin([val])]
+    #     df = dfF
 
-            # inclusion of specific rows
+    def filter_df(df, criteria):
+        new_df = pd.DataFrame()
+        for filter_value in sorted(criteria.split(',')):
+            filter_value = filter_value.strip()
+            col, val = filter_value.split(':')[0], filter_value.split(':')[1]
             if not filter_value.startswith('~'):
-                print('\t- Including only rows with \'' + col + '\' = \'' + val + '\'')
-                if dfF.empty:
-                    df_filtered = df[df[col].isin([val])]
-                    dfF = dfF.append(df_filtered)
-                else:
-                    dfF = dfF[dfF[col].isin([val])]
-                # print(dfF)
-        # for filter_value in sorted([f.strip() for f in filters.split(',')]):
-        for filter_value in sorted(filters):
-            col = filter_value.split(':')[0]
-            val = filter_value.split(':')[1]
-            # exclusion of specific rows
+                df_filtered = df[df[col].isin([val])]
+                new_df = new_df.append(df_filtered)
+                print(df_filtered)
+        for filter_value in sorted(criteria.split(',')):
+            filter_value = filter_value.strip()
             if filter_value.startswith('~'):
-                col = col[1:]
-                print('\t- Excluding all rows with \'' + col + '\' = \'' + val + '\'')
-                if dfF.empty:
-                    df_filtered = df[~df[col].isin([val])]
-                    dfF = dfF.append(df_filtered)
+                filter_value = filter_value[1:]
+                col, val = filter_value.split(':')[0], filter_value.split(':')[1]
+                if new_df.empty:
+                    df = df[~df[col].isin([val])]
+                    new_df = new_df.append(df)
                 else:
-                    dfF = dfF[~dfF[col].isin([val])]
-        df = dfF
-    print(df.columns.tolist())
+                    new_df = new_df[~new_df[filter_value.split(':')[0]].isin([filter_value.split(':')[1]])]
+        return new_df
+
+
+    # load data
+    if filters not in ['', None]:
+        df = filter_df(df, filters)
 
     # filter by time
     if x_type == 'time':
@@ -245,6 +269,7 @@ if __name__ == '__main__':
         df2.at[y, x] = count
 
     # save
+    print(df2)
     df2 = df2.reset_index()
     df2 = df2.drop(columns=['unique_id1', 'unique_id2'])
     df2 = df2[y_var + extra_cols + data_cols]
