@@ -2,3 +2,9 @@
 config/.DS_Store
 data/.DS_Store
 scripts/.DS_Store
+figures/pyramid/.DS_Store
+figures/map/.DS_Store
+figures/donnut/.DS_Store
+figures/lineplot/.DS_Store
+figures/.DS_Store
+.DS_Store

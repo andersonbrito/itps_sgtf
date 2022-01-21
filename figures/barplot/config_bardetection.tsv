@@ -1,0 +1,16 @@
+param	value	note
+scale	absolute	# scale of the data to be plotted as stacks
+y_var	S_detection	# main variable, shown on Y axis
+x_label		# X label
+y_label	Número de testes positivos\n(RT-PCR, método SGTF)	# Y label
+groupby	country	# column containing categories of data to be plotted as subplots
+filter		# comma-separated list of rows to keep or remove rows. Format: '~column_name:value'. Remove '~' to keep only that data category.
+ignore_cols	2022-01-10	# columns to be ignored in the line plot
+colour_by	S_detection	# variable to be represented in the colour scheme
+colour_scheme	nipy_spectral	# colour pallete, if colour file not provided
+show_legend	no	# yes or no
+column_legend	1	# number of columns of the legend
+nrows	1	# number of rows of the multiplot
+ncols	2	# number of columns of the multiplot
+same_yscale	no	# same Y axis scale
+figsize	11, 3	# figure size: width and height, in inches
