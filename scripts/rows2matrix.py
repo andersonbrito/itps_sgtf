@@ -16,6 +16,10 @@ import itertools
 pd.set_option('max_columns', 100)
 # print(pd.show_versions())
 
+import platform
+print('Python version:', platform.python_version())
+print('Pandas version:', pd.__version__)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -34,6 +38,7 @@ if __name__ == '__main__':
     parser.add_argument("--unique-id", required=True, type=str, help="Column including the unique ids to be displayed in the Y axis")
     parser.add_argument("--extra-columns", nargs="+", required=False, type=str, help="Extra columns to export")
     parser.add_argument("--filter", required=False, type=str, help="Format: '~column_name:value'. Remove '~' to keep only that data category")
+    parser.add_argument("--time-var", required=False, type=str, help="Time variable, when x variable is not temporal data")
     parser.add_argument("--start-date", required=False, type=str,  help="Start date in YYYY-MM-DD format")
     parser.add_argument("--end-date", required=False, type=str,  help="End date in YYYY-MM-DD format")
     parser.add_argument("--output", required=True, help="TSV matrix")
@@ -49,23 +54,24 @@ if __name__ == '__main__':
     y_unique_id = args.unique_id
     extra_cols = args.extra_columns
     filters = args.filter
+    timevar = args.time_var
     start_date = args.start_date
     end_date = args.end_date
     output = args.output
 
-    # path = '/Users/anderson/GLab Dropbox/Anderson Brito/ITpS/projetos_itps/sgtf_omicron/analyses/'
-    # input = path + 'results/combined_testdata_geo.tsv'
-    # x_var = 'date_testing'
-    # x_type = 'time'
-    # y_var = ['ADM2_PCODE', 'S_detection']
-    # y_unique_id ='ADM2_PCODE'
+    # path = '/Users/anderson/GLab Dropbox/Anderson Brito/ITpS/projetos_itps/sgtf_omicron/analyses/run5_20220118_sgtf/'
+    # input = path + 'combined.tsv'
+    # x_var = 'age_group'
+    # x_type = ''
+    # y_var = ['sex', 'S_detection']
+    # y_unique_id = 'sex'
     # target_variable = ''
     # sum_target = ''
     # data_format = 'integer'
-    # extra_cols = ['ADM1_PT', 'ADM2_PT']
-    # filters = ['~test_result:Negative']
+    # extra_cols = ''
+    # filters = "sex:F, sex:M, ~test_result:Negative"
     # start_date = '2021-12-01' # start date above this limit
-    # end_date = '2021-12-18' # end date below this limit
+    # end_date = '2022-01-15' # end date below this limit
     # output = path + 'matrix.tsv'
 
 
@@ -92,75 +98,53 @@ if __name__ == '__main__':
     for idx in y_var:
         df = df[~df[idx].isin([''])]
 
-    # dfF = pd.DataFrame()
-    # if filters not in ['', None]:
-    #     print('\nFiltering rows based on provided values...')
-    #     # for filter_value in sorted([f.strip() for f in filters.split(',')]):
-    #     for filter_value in sorted(filters):
-    #         col = filter_value.split(':')[0]
-    #         val = filter_value.split(':')[1]
-    #
-    #         # inclusion of specific rows
-    #         if not filter_value.startswith('~'):
-    #             print('\t- Including only rows with \'' + col + '\' = \'' + val + '\'')
-    #             if dfF.empty:
-    #                 df_filtered = df[df[col].isin([val])]
-    #                 dfF = dfF.append(df_filtered)
-    #             else:
-    #                 dfF = dfF[dfF[col].isin([val])]
-    #             print(dfF)
-    #     # for filter_value in sorted([f.strip() for f in filters.split(',')]):
-    #     for filter_value in sorted(filters):
-    #         col = filter_value.split(':')[0]
-    #         val = filter_value.split(':')[1]
-    #         # exclusion of specific rows
-    #         if filter_value.startswith('~'):
-    #             col = col[1:]
-    #             print('\t- Excluding all rows with \'' + col + '\' = \'' + val + '\'')
-    #             if dfF.empty:
-    #                 df_filtered = df[~df[col].isin([val])]
-    #                 dfF = dfF.append(df_filtered)
-    #             else:
-    #                 dfF = dfF[~dfF[col].isin([val])]
-    #     df = dfF
-
     def filter_df(df, criteria):
         new_df = pd.DataFrame()
         for filter_value in sorted(criteria.split(',')):
             filter_value = filter_value.strip()
             col, val = filter_value.split(':')[0], filter_value.split(':')[1]
+            if val == '\'\'':
+                val = ''
             if not filter_value.startswith('~'):
+                print('\t- Including only rows with \'' + col + '\' = \'' + val + '\'')
                 df_filtered = df[df[col].isin([val])]
                 new_df = new_df.append(df_filtered)
-                print(df_filtered)
+
         for filter_value in sorted(criteria.split(',')):
             filter_value = filter_value.strip()
             if filter_value.startswith('~'):
+                print('\t- Excluding all rows with \'' + col + '\' = \'' + val + '\'')
                 filter_value = filter_value[1:]
                 col, val = filter_value.split(':')[0], filter_value.split(':')[1]
+                if val == '\'\'':
+                    val = ''
                 if new_df.empty:
                     df = df[~df[col].isin([val])]
                     new_df = new_df.append(df)
                 else:
-                    new_df = new_df[~new_df[filter_value.split(':')[0]].isin([filter_value.split(':')[1]])]
+                    new_df = new_df[~new_df[col].isin([val])]
         return new_df
 
 
     # load data
     if filters not in ['', None]:
         df = filter_df(df, filters)
+    # print(set(df['age_group'].tolist()))
 
     # filter by time
     if x_type == 'time':
-        today = time.strftime('%Y-%m-%d', time.gmtime())
-        df[x_var] = pd.to_datetime(df[x_var])  # converting to datetime format
-        if start_date in [None, '']:
-            start_date = df[x_var].min()
-        if end_date in [None, '']:
-            end_date = today
-        mask = (df[x_var] >= start_date) & (df[x_var] <= end_date)  # mask any lines with dates outside the start/end dates
-        df = df.loc[mask]  # apply mask
-        df[x_var] = df[x_var].dt.strftime('%Y-%m-%d')
+        if timevar in ['', None]:
+            timevar = x_var
+
+    today = time.strftime('%Y-%m-%d', time.gmtime())
+    df[timevar] = pd.to_datetime(df[timevar])  # converting to datetime format
+    if start_date in [None, '']:
+        start_date = df[timevar].min()
+    if end_date in [None, '']:
+        end_date = today
+    mask = (df[timevar] >= start_date) & (df[timevar] <= end_date)  # mask any lines with dates outside the start/end dates
+    df = df.loc[mask]  # apply mask
+    df[timevar] = df[timevar].dt.strftime('%Y-%m-%d')
 
     if x_type == 'time':
         time_range = [day.strftime('%Y-%m-%d') for day in list(pd.date_range(pd.to_datetime(start_date), pd.to_datetime(end_date), freq='d'))]
@@ -269,7 +253,6 @@ if __name__ == '__main__':
         df2.at[y, x] = count
 
     # save
-    print(df2)
     df2 = df2.reset_index()
     df2 = df2.drop(columns=['unique_id1', 'unique_id2'])
     df2 = df2[y_var + extra_cols + data_cols]
