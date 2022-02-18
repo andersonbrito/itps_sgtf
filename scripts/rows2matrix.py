@@ -2,7 +2,7 @@
 
 # Created by: Anderson Brito
 #
-# row2matrix.py -> It converts stacked rows of values in two columns into a matrix
+# row2matrix.py -> It converts rows of values into a matrix of occurrences
 #
 #
 # Release date: 2021-08-22
