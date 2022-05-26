@@ -1,8 +1,10 @@
 ## Instalação
 
-Para instalar este pipeline, garanta que `conda` e `mamba`:
+Para instalar este pipeline, instale `conda` e `mamba`:
+
+Instalação do Conda: [clique aqui](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
+Instalação do Mamba:
 ```
-[conda aqui]
 conda install -n base conda-forge::mamba
 ```
 
@@ -22,4 +24,11 @@ Uma vez instalados `conda` e `mamba`, acesse o diretório `config`, e execute os
 Por fim, ative o ambiente `diag`:
 ```
 conda activate diag
+```
+
+## Instalação
+
+Para executar o pipeline até seu último passo, execute o seguinte comando, com o ambiente `diag` ativado:
+```
+conda install -n base conda-forge::mamba
 ```
