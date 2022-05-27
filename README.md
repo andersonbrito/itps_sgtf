@@ -3,6 +3,7 @@
 Para instalar este pipeline, instale `conda` e `mamba`:
 
 Instalação do Conda: [clique aqui](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
+
 Instalação do Mamba:
 ```
 conda install -n base conda-forge::mamba
