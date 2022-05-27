@@ -29,7 +29,7 @@ conda activate diag
 
 ## Execução
 
-Para executar o pipeline até seu último passo, execute o seguinte comando, com o ambiente `diag` ativado:
+Para executar o pipeline até o último passo, execute o seguinte comando, com o ambiente `diag` ativado:
 ```
 snakemake all --cores all
 ```
