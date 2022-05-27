@@ -15,7 +15,7 @@ Clone this repository `ncov`
 git clone https://github.com/andersonbrito/itps_sgtf.git
 ```
 
-Uma vez instalados `conda` e `mamba`, acesse o diretório `config`, e execute os seguintes comandos:
+Uma vez instalados `conda` e `mamba`, acesse o diretório `config`, e execute os seguintes comandos para criar o ambiente conda `diag`:
 
 ```
  mamba create -n diag
