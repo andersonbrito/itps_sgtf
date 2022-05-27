@@ -2,9 +2,9 @@
 
 Para instalar este pipeline, instale `conda` e `mamba`:
 
-Instalação do Conda: [clique aqui](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
+- Instalação do Conda: [clique aqui](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
 
-Instalação do Mamba:
+- Instalação do Mamba, execute este comando, uma vez que Conda esteja instalado:
 ```
 conda install -n base conda-forge::mamba
 ```
