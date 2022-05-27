@@ -26,9 +26,9 @@ Por fim, ative o ambiente `diag`:
 conda activate diag
 ```
 
-## Instalação
+## Execução
 
 Para executar o pipeline até seu último passo, execute o seguinte comando, com o ambiente `diag` ativado:
 ```
-conda install -n base conda-forge::mamba
+snakemake all --cores all
 ```
